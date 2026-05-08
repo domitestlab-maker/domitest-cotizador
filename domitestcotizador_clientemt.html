@@ -396,6 +396,85 @@
   }
   .btn-clear:hover { border-color: #c0392b; color: #c0392b; background: #fef0f0; }
 
+  /* QUOTE SAVED PANEL */
+  .quote-saved {
+    display: none;
+    margin-top: 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--green-light), #e8f4d4);
+    border: 1.5px solid var(--green);
+    border-radius: 12px;
+  }
+  .quote-saved.show { display: block; }
+  .quote-saved .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--green-dark);
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .quote-saved .code {
+    font-family: 'Sora', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--green-dark);
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+  }
+  .quote-saved .link-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    margin-bottom: 8px;
+  }
+  .quote-saved .link-input {
+    flex: 1;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 0.78rem;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    background: white;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .quote-saved .btn-copy {
+    background: var(--blue);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0 16px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .quote-saved .btn-copy:hover { background: var(--blue-dark); }
+  .quote-saved .btn-copy.copied { background: var(--green-dark); }
+  .quote-saved .btn-wa {
+    width: 100%;
+    background: #25D366;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 11px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    margin-top: 4px;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .quote-saved .btn-wa:hover { background: #1DA851; }
+
   /* NOTES */
   .notes-textarea {
     width: 100%;
@@ -679,6 +758,21 @@
           Agendar o resolver dudas
         </button>
         <button class="btn-clear" onclick="clearAll()">🗑 Limpiar todo</button>
+
+        <!-- Panel que aparece después de generar la cotización -->
+        <div class="quote-saved" id="quoteSavedPanel">
+          <div class="label">Cotización guardada</div>
+          <div class="code" id="savedCode">DT-XXXXX</div>
+          <div class="label" style="margin-bottom:6px;">Link para agendar la cita</div>
+          <div class="link-row">
+            <input type="text" class="link-input" id="agendadorLinkInput" readonly>
+            <button class="btn-copy" id="btnCopyLink" onclick="copyAgendadorLink()">📋 Copiar</button>
+          </div>
+          <button class="btn-wa" onclick="enviarLinkPorWhatsApp()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.122.554 4.118 1.528 5.85L.057 23.428a.75.75 0 0 0 .916.95l5.688-1.493A11.944 11.944 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.885 0-3.65-.52-5.16-1.427l-.36-.215-3.733.98.999-3.648-.235-.374A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+            Enviar link al paciente por WhatsApp
+          </button>
+        </div>
       </div>
     </div>
 
@@ -691,6 +785,78 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
+// ── CONFIG ─────────────────────────────────────────────────────
+const PROXY_URL = 'https://domitest-proxy.vercel.app';
+const AGENDADOR_URL = 'https://domitestlab-maker.github.io/domitest-agendador';
+
+// Estado de la cotización guardada en backend (código DT-XXXXX)
+let savedQuoteCode = null;
+
+// Palabras clave para detectar exámenes que requieren ayuno
+const FASTING_KEYWORDS = ['GLUCOSA', 'PERFIL LIPIDICO', 'COLESTEROL', 'TRIGLICERIDOS', 'INSULINA', 'TGO', 'TGP', 'TRANSAMINASAS', 'BILIRRUBINA', 'ACIDO URICO', 'CURVA DE TOLERANCIA'];
+
+function detectFasting(exams) {
+  return exams.some(e => {
+    const name = (e.name || '').toUpperCase();
+    return FASTING_KEYWORDS.some(k => name.includes(k));
+  });
+}
+
+async function saveQuoteToBackend(payload) {
+  const res = await fetch(PROXY_URL + '/api/quotes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('No se pudo guardar la cotización (HTTP ' + res.status + ')');
+  return res.json();
+}
+
+function buildAgendadorLink(code) {
+  return AGENDADOR_URL + '/?code=' + encodeURIComponent(code);
+}
+
+function showQuoteSavedPanel(code) {
+  savedQuoteCode = code;
+  document.getElementById('savedCode').textContent = code;
+  document.getElementById('agendadorLinkInput').value = buildAgendadorLink(code);
+  document.getElementById('quoteSavedPanel').classList.add('show');
+}
+
+function hideQuoteSavedPanel() {
+  savedQuoteCode = null;
+  document.getElementById('quoteSavedPanel').classList.remove('show');
+}
+
+function copyAgendadorLink() {
+  const input = document.getElementById('agendadorLinkInput');
+  const text = input.value;
+  const finish = () => {
+    const btn = document.getElementById('btnCopyLink');
+    btn.classList.add('copied');
+    btn.textContent = '✓ Copiado';
+    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '📋 Copiar'; }, 2000);
+    showToast('Link copiado al portapapeles', 'success');
+  };
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(finish).catch(() => { input.select(); document.execCommand('copy'); finish(); });
+  } else {
+    input.select(); document.execCommand('copy'); finish();
+  }
+}
+
+function enviarLinkPorWhatsApp() {
+  if (!savedQuoteCode) return;
+  const patName = (document.getElementById('patientName').value || '').trim();
+  const patPhone = (document.getElementById('patientPhone').value || '').replace(/\D/g, '');
+  const link = buildAgendadorLink(savedQuoteCode);
+  const greeting = patName ? 'Hola ' + patName.split(' ')[0] : 'Hola';
+  const msg = greeting + ', este es tu link personal para agendar tu toma de muestra a domicilio con Domitest:\n\n' + link + '\n\nEntra y elige los días que te sirven. Te confirmamos la hora exacta por aquí. Cualquier duda, escríbenos.';
+  // Si el paciente dejó número de 10 dígitos colombianos, abre chat con él directamente
+  const phoneArg = patPhone && patPhone.length >= 10 ? '57' + patPhone.slice(-10) : '573005331667';
+  window.open('https://wa.me/' + phoneArg + '?text=' + encodeURIComponent(msg), '_blank');
+}
+
 // ── EXAM DATABASE ──────────────────────────────────────────────
 const EXAMS_DB = [
   ["ACETAMINOFEN SEMICUANTITATIVA POR INMUNOENSAYO", 89500],
@@ -1741,8 +1907,14 @@ function updateSummary() {
 // ── PDF GENERATION ─────────────────────────────────────────────
 
 function abrirWhatsApp() {
-  const msg = encodeURIComponent('Hola Domitest! Ya genere mi cotizacion y me gustaria agendar mi toma de muestras o tengo una pregunta. Me pueden ayudar?');
-  window.open('https://wa.me/573005331667?text=' + msg, '_blank');
+  let texto;
+  if (savedQuoteCode) {
+    const link = buildAgendadorLink(savedQuoteCode);
+    texto = 'Hola Domitest! Ya genere mi cotizacion (' + savedQuoteCode + ') y este es mi link de agendamiento: ' + link + '\n\nQuiero agendar mi toma de muestras o tengo una pregunta. Me pueden ayudar?';
+  } else {
+    texto = 'Hola Domitest! Ya genere mi cotizacion y me gustaria agendar mi toma de muestras o tengo una pregunta. Me pueden ayudar?';
+  }
+  window.open('https://wa.me/573005331667?text=' + encodeURIComponent(texto), '_blank');
 }
 
 async function generatePDF() {
@@ -1754,6 +1926,33 @@ async function generatePDF() {
   }
   const btn = document.getElementById('btnGenerate');
   btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  // ── 1. Guardar cotización en backend (genera código DT-XXXXX) ──
+  let savedQuote;
+  try {
+    const subtotalForSave = selectedExams.reduce((s, e) => s + (e.price || 0), 0);
+    const domInputForSave = document.getElementById('domicilioInput');
+    const zonePriceForSave = domInputForSave ? (parseInt(domInputForSave.value) || selectedZone.price || 0) : (selectedZone.price || 0);
+    savedQuote = await saveQuoteToBackend({
+      patient_name: (document.getElementById('patientName').value || '').trim() || null,
+      patient_doc: (document.getElementById('patientDoc').value || '').trim() || null,
+      patient_phone: (document.getElementById('patientPhone').value || '').trim() || null,
+      doctor_name: (document.getElementById('doctorName').value || '').trim() || null,
+      exams: selectedExams.map(e => ({ name: e.name, price: e.price || 0 })),
+      zone_name: selectedZone.name,
+      zone_price: zonePriceForSave,
+      subtotal_exams: subtotalForSave,
+      total: subtotalForSave + zonePriceForSave,
+      needs_fasting: detectFasting(selectedExams)
+    });
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = 'Generar Cotización';
+    showToast('Error guardando: ' + err.message, 'error');
+    return;
+  }
+
   btn.textContent = 'Generando PDF...';
   try {
     const { jsPDF } = window.jspdf;
@@ -1768,7 +1967,8 @@ async function generatePDF() {
     const muted = [120, 138, 150];
 
     // Variables
-    const qNum = document.getElementById('quoteNumber').value || 'COT-001';
+    const qNum = savedQuote.code; // DT-XXXXX real desde backend
+    const agendadorLink = buildAgendadorLink(qNum);
     const qDate = document.getElementById('quoteDate').value;
     const patName = document.getElementById('patientName').value || '-';
     const patDoc = document.getElementById('patientDoc').value || '-';
@@ -1950,6 +2150,20 @@ async function generatePDF() {
       doc.text(lines, margin, notesY + 7);
     }
 
+    // ─ LINK AGENDADOR ──────────────────────────────────
+    // Banner verde con link directo al agendador
+    const linkY = H - 30;
+    doc.setFillColor(241, 248, 228);
+    doc.setDrawColor(...green);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(margin, linkY, W - margin * 2, 12, 2, 2, 'FD');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(91, 121, 50);
+    doc.text('AGENDA TU CITA AQUI:', margin + 4, linkY + 5);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...blue);
+    doc.textWithLink(agendadorLink, margin + 44, linkY + 5, { url: agendadorLink });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...muted);
+    doc.text('Codigo de tu cotizacion: ' + qNum, margin + 4, linkY + 9.5);
+
     // ─ FOOTER ──────────────────────────────────────────
     const footerY = H - 13;
     doc.setDrawColor(210, 220, 225); doc.setLineWidth(0.3);
@@ -1961,7 +2175,10 @@ async function generatePDF() {
 
     const filename = 'Cotizacion_' + (patName || 'Paciente').replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'') + '_' + qNum.replace(/[^a-zA-Z0-9]/g,'') + '.pdf';
     doc.save(filename);
-    showToast('PDF generado exitosamente', 'success');
+    showToast('Cotización guardada (' + qNum + ') y PDF generado', 'success');
+
+    // Mostrar panel con código + link
+    showQuoteSavedPanel(qNum);
 
   } catch(err) {
     console.error(err);
@@ -1996,6 +2213,7 @@ function clearAll() {
   document.getElementById('doctorName').value = '';
   document.getElementById('quoteNotes').value = '';
   document.getElementById('quoteNumber').value = 'COT-' + String(quoteCounter++).padStart(3, '0');
+  hideQuoteSavedPanel();
   document.querySelector('.upload-zone p').textContent = 'Haz clic o arrastra la orden aquí';
   const aiStatus = document.getElementById('aiStatus');
   aiStatus.className = 'ai-status';
