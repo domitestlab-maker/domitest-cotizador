@@ -371,6 +371,60 @@
   }
   .btn-clear:hover { border-color: #c0392b; color: #c0392b; background: #fef0f0; }
 
+  /* QUOTE SAVED PANEL */
+  .quote-saved {
+    display: none;
+    margin-top: 16px;
+    padding: 18px;
+    background: linear-gradient(135deg, var(--green-light), #e8f4d4);
+    border: 1.5px solid var(--green);
+    border-radius: 12px;
+    text-align: center;
+  }
+  .quote-saved.show { display: block; }
+  .quote-saved .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--green-dark);
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .quote-saved .code {
+    font-family: 'Sora', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--green-dark);
+    letter-spacing: 0.05em;
+    margin-bottom: 14px;
+  }
+  .quote-saved .btn-copy-msg {
+    width: 100%;
+    background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(91,154,184,0.3);
+  }
+  .quote-saved .btn-copy-msg:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(91,154,184,0.4);
+  }
+  .quote-saved .btn-copy-msg.copied {
+    background: linear-gradient(135deg, var(--green), var(--green-dark));
+  }
+  .quote-saved .btn-copy-msg:active { transform: translateY(0); }
+
   /* NOTES */
   .notes-textarea {
     width: 100%;
@@ -656,6 +710,15 @@
           📄 Generar PDF de Cotización
         </button>
         <button class="btn-clear" onclick="clearAll()">🗑 Limpiar todo</button>
+
+        <!-- Panel que aparece después de generar la cotización -->
+        <div class="quote-saved" id="quoteSavedPanel">
+          <div class="label">Cotización guardada</div>
+          <div class="code" id="savedCode">DT-XXXXX</div>
+          <button class="btn-copy-msg" id="btnCopyMsg" onclick="copyMessageForPatient()">
+            📋 Copiar mensaje para paciente
+          </button>
+        </div>
       </div>
     </div>
 
@@ -668,6 +731,78 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
+// ── CONFIG ─────────────────────────────────────────────────────
+const PROXY_URL = 'https://domitest-proxy.vercel.app';
+const AGENDADOR_URL = 'https://domitestlab-maker.github.io/domitest-agendador';
+
+// Estado de la cotización guardada en backend
+let savedQuoteCode = null;
+
+// Palabras clave para detectar exámenes que requieren ayuno
+const FASTING_KEYWORDS = ['GLUCOSA', 'PERFIL LIPIDICO', 'COLESTEROL', 'TRIGLICERIDOS', 'INSULINA', 'TGO', 'TGP', 'TRANSAMINASAS', 'BILIRRUBINA', 'ACIDO URICO', 'CURVA DE TOLERANCIA'];
+
+function detectFasting(exams) {
+  return exams.some(e => {
+    const name = (e.name || '').toUpperCase();
+    return FASTING_KEYWORDS.some(k => name.includes(k));
+  });
+}
+
+async function saveQuoteToBackend(payload) {
+  const res = await fetch(PROXY_URL + '/api/quotes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('No se pudo guardar la cotización (HTTP ' + res.status + ')');
+  return res.json();
+}
+
+function buildAgendadorLink(code) {
+  return AGENDADOR_URL + '/?code=' + encodeURIComponent(code);
+}
+
+function showQuoteSavedPanel(code) {
+  savedQuoteCode = code;
+  document.getElementById('savedCode').textContent = code;
+  document.getElementById('quoteSavedPanel').classList.add('show');
+}
+
+function hideQuoteSavedPanel() {
+  savedQuoteCode = null;
+  document.getElementById('quoteSavedPanel').classList.remove('show');
+}
+
+function buildPatientMessage(code) {
+  const patName = (document.getElementById('patientName').value || '').trim();
+  const greeting = patName ? 'Hola ' + patName.split(' ')[0] : 'Hola';
+  const link = buildAgendadorLink(code);
+  return greeting + ', este es tu link personal para agendar tu toma de muestra a domicilio con Domitest:\n\n' + link + '\n\nEntra y elige los días que te sirven. Te confirmaremos la hora exacta por aquí. Cualquier duda, escríbeme.';
+}
+
+function copyMessageForPatient() {
+  if (!savedQuoteCode) return;
+  const text = buildPatientMessage(savedQuoteCode);
+  const finish = () => {
+    const btn = document.getElementById('btnCopyMsg');
+    btn.classList.add('copied');
+    btn.textContent = '✓ Mensaje copiado';
+    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '📋 Copiar mensaje para paciente'; }, 2500);
+    showToast('Mensaje copiado, ya puedes pegarlo en WhatsApp', 'success');
+  };
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(finish).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta); finish();
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta); finish();
+  }
+}
+
 // ── EXAM DATABASE ──────────────────────────────────────────────
 const EXAMS_DB = [
   ["ACETAMINOFEN SEMICUANTITATIVA POR INMUNOENSAYO", 89500],
@@ -1725,6 +1860,33 @@ async function generatePDF() {
   }
   const btn = document.getElementById('btnGenerate');
   btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  // ── 1. Guardar cotización en backend (genera código DT-XXXXX) ──
+  let savedQuote;
+  try {
+    const subtotalForSave = selectedExams.reduce((s, e) => s + (e.price || 0), 0);
+    const domInputForSave = document.getElementById('domicilioInput');
+    const zonePriceForSave = domInputForSave ? (parseInt(domInputForSave.value) || selectedZone.price || 0) : (selectedZone.price || 0);
+    savedQuote = await saveQuoteToBackend({
+      patient_name: (document.getElementById('patientName').value || '').trim() || null,
+      patient_doc: (document.getElementById('patientDoc').value || '').trim() || null,
+      patient_phone: (document.getElementById('patientPhone').value || '').trim() || null,
+      doctor_name: (document.getElementById('doctorName').value || '').trim() || null,
+      exams: selectedExams.map(e => ({ name: e.name, price: e.price || 0 })),
+      zone_name: selectedZone.name,
+      zone_price: zonePriceForSave,
+      subtotal_exams: subtotalForSave,
+      total: subtotalForSave + zonePriceForSave,
+      needs_fasting: detectFasting(selectedExams)
+    });
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = '📄 Generar PDF de Cotización';
+    showToast('Error guardando: ' + err.message, 'error');
+    return;
+  }
+
   btn.textContent = 'Generando PDF...';
   try {
     const { jsPDF } = window.jspdf;
@@ -1739,7 +1901,8 @@ async function generatePDF() {
     const muted = [120, 138, 150];
 
     // Variables
-    const qNum = document.getElementById('quoteNumber').value || 'COT-001';
+    const qNum = savedQuote.code; // DT-XXXXX real desde backend
+    const agendadorLink = buildAgendadorLink(qNum);
     const qDate = document.getElementById('quoteDate').value;
     const patName = document.getElementById('patientName').value || '-';
     const patDoc = document.getElementById('patientDoc').value || '-';
@@ -1921,6 +2084,19 @@ async function generatePDF() {
       doc.text(lines, margin, notesY + 7);
     }
 
+    // ─ LINK AGENDADOR ──────────────────────────────────
+    const linkY = H - 30;
+    doc.setFillColor(241, 248, 228);
+    doc.setDrawColor(...green);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(margin, linkY, W - margin * 2, 12, 2, 2, 'FD');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(91, 121, 50);
+    doc.text('AGENDA TU CITA AQUI:', margin + 4, linkY + 5);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...blue);
+    doc.textWithLink(agendadorLink, margin + 44, linkY + 5, { url: agendadorLink });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...muted);
+    doc.text('Codigo de tu cotizacion: ' + qNum, margin + 4, linkY + 9.5);
+
     // ─ FOOTER ──────────────────────────────────────────
     const footerY = H - 13;
     doc.setDrawColor(210, 220, 225); doc.setLineWidth(0.3);
@@ -1932,14 +2108,17 @@ async function generatePDF() {
 
     const filename = 'Cotizacion_' + (patName || 'Paciente').replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'') + '_' + qNum.replace(/[^a-zA-Z0-9]/g,'') + '.pdf';
     doc.save(filename);
-    showToast('PDF generado exitosamente', 'success');
+    showToast('Cotización guardada (' + qNum + ') y PDF generado', 'success');
+
+    // Mostrar panel con código + botón copiar mensaje
+    showQuoteSavedPanel(qNum);
 
   } catch(err) {
     console.error(err);
     showToast('Error generando PDF: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Generar PDF de Cotizacion';
+    btn.textContent = '📄 Generar PDF de Cotización';
   }
 }
 
@@ -1971,6 +2150,7 @@ function clearAll() {
   const aiStatus = document.getElementById('aiStatus');
   aiStatus.className = 'ai-status';
   document.getElementById('fileInput').value = '';
+  hideQuoteSavedPanel();
   showToast('Lista limpiada', '');
 }
 </script>

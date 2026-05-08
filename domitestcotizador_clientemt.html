@@ -400,10 +400,11 @@
   .quote-saved {
     display: none;
     margin-top: 16px;
-    padding: 16px;
+    padding: 18px;
     background: linear-gradient(135deg, var(--green-light), #e8f4d4);
     border: 1.5px solid var(--green);
     border-radius: 12px;
+    text-align: center;
   }
   .quote-saved.show { display: block; }
   .quote-saved .label {
@@ -416,64 +417,35 @@
   }
   .quote-saved .code {
     font-family: 'Sora', sans-serif;
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     font-weight: 700;
     color: var(--green-dark);
     letter-spacing: 0.05em;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
   }
-  .quote-saved .link-row {
-    display: flex;
-    gap: 8px;
-    align-items: stretch;
-    margin-bottom: 8px;
-  }
-  .quote-saved .link-input {
-    flex: 1;
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    padding: 9px 12px;
-    font-size: 0.78rem;
-    font-family: 'DM Sans', sans-serif;
-    color: var(--text);
-    background: white;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .quote-saved .btn-copy {
-    background: var(--blue);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 0 16px;
-    font-size: 0.82rem;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    transition: background 0.15s;
-    white-space: nowrap;
-  }
-  .quote-saved .btn-copy:hover { background: var(--blue-dark); }
-  .quote-saved .btn-copy.copied { background: var(--green-dark); }
-  .quote-saved .btn-wa {
+  .quote-saved .btn-agendar {
     width: 100%;
-    background: #25D366;
+    background: linear-gradient(135deg, var(--green), var(--green-dark));
     color: white;
     border: none;
-    border-radius: 8px;
-    padding: 11px;
-    font-size: 0.88rem;
-    font-weight: 600;
-    cursor: pointer;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 0.95rem;
+    font-weight: 700;
     font-family: inherit;
-    margin-top: 4px;
-    transition: background 0.15s;
+    cursor: pointer;
+    transition: all 0.15s;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(139,195,74,0.3);
   }
-  .quote-saved .btn-wa:hover { background: #1DA851; }
+  .quote-saved .btn-agendar:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(139,195,74,0.4);
+  }
+  .quote-saved .btn-agendar:active { transform: translateY(0); }
 
   /* NOTES */
   .notes-textarea {
@@ -763,14 +735,8 @@
         <div class="quote-saved" id="quoteSavedPanel">
           <div class="label">Cotización guardada</div>
           <div class="code" id="savedCode">DT-XXXXX</div>
-          <div class="label" style="margin-bottom:6px;">Link para agendar la cita</div>
-          <div class="link-row">
-            <input type="text" class="link-input" id="agendadorLinkInput" readonly>
-            <button class="btn-copy" id="btnCopyLink" onclick="copyAgendadorLink()">📋 Copiar</button>
-          </div>
-          <button class="btn-wa" onclick="enviarLinkPorWhatsApp()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.122.554 4.118 1.528 5.85L.057 23.428a.75.75 0 0 0 .916.95l5.688-1.493A11.944 11.944 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.885 0-3.65-.52-5.16-1.427l-.36-.215-3.733.98.999-3.648-.235-.374A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
-            Enviar link al paciente por WhatsApp
+          <button class="btn-agendar" onclick="irAlAgendador()">
+            ▶ Agendar mi cita ahora
           </button>
         </div>
       </div>
@@ -819,7 +785,6 @@ function buildAgendadorLink(code) {
 function showQuoteSavedPanel(code) {
   savedQuoteCode = code;
   document.getElementById('savedCode').textContent = code;
-  document.getElementById('agendadorLinkInput').value = buildAgendadorLink(code);
   document.getElementById('quoteSavedPanel').classList.add('show');
 }
 
@@ -828,33 +793,9 @@ function hideQuoteSavedPanel() {
   document.getElementById('quoteSavedPanel').classList.remove('show');
 }
 
-function copyAgendadorLink() {
-  const input = document.getElementById('agendadorLinkInput');
-  const text = input.value;
-  const finish = () => {
-    const btn = document.getElementById('btnCopyLink');
-    btn.classList.add('copied');
-    btn.textContent = '✓ Copiado';
-    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '📋 Copiar'; }, 2000);
-    showToast('Link copiado al portapapeles', 'success');
-  };
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(finish).catch(() => { input.select(); document.execCommand('copy'); finish(); });
-  } else {
-    input.select(); document.execCommand('copy'); finish();
-  }
-}
-
-function enviarLinkPorWhatsApp() {
+function irAlAgendador() {
   if (!savedQuoteCode) return;
-  const patName = (document.getElementById('patientName').value || '').trim();
-  const patPhone = (document.getElementById('patientPhone').value || '').replace(/\D/g, '');
-  const link = buildAgendadorLink(savedQuoteCode);
-  const greeting = patName ? 'Hola ' + patName.split(' ')[0] : 'Hola';
-  const msg = greeting + ', este es tu link personal para agendar tu toma de muestra a domicilio con Domitest:\n\n' + link + '\n\nEntra y elige los días que te sirven. Te confirmamos la hora exacta por aquí. Cualquier duda, escríbenos.';
-  // Si el paciente dejó número de 10 dígitos colombianos, abre chat con él directamente
-  const phoneArg = patPhone && patPhone.length >= 10 ? '57' + patPhone.slice(-10) : '573005331667';
-  window.open('https://wa.me/' + phoneArg + '?text=' + encodeURIComponent(msg), '_blank');
+  window.location.href = buildAgendadorLink(savedQuoteCode);
 }
 
 // ── EXAM DATABASE ──────────────────────────────────────────────
