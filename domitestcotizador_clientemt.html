@@ -804,7 +804,14 @@ function hideQuoteSavedPanel() {
 
 function irAlAgendador() {
   if (!savedQuoteCode) return;
-  window.location.href = buildAgendadorLink(savedQuoteCode);
+  const link = buildAgendadorLink(savedQuoteCode);
+  // Si estamos embebidos en un iframe, navegar la pestaña completa para salir del iframe;
+  // Hostinger bloquea cargar sus páginas dentro de iframes de otros dominios.
+  if (window.top && window.top !== window.self) {
+    window.top.location.href = link;
+  } else {
+    window.location.href = link;
+  }
 }
 
 // ── EXAM DATABASE ──────────────────────────────────────────────
