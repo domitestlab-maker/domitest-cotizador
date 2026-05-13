@@ -788,7 +788,9 @@ async function saveQuoteToBackend(payload) {
 }
 
 function buildAgendadorLink(code) {
-  return AGENDADOR_URL + '?code=' + encodeURIComponent(code);
+  // Usar hash (#) en lugar de query (?) porque Hostinger Builder strippea
+  // los query strings antes de que la página JS los pueda leer.
+  return AGENDADOR_URL + '#code=' + encodeURIComponent(code);
 }
 
 function showQuoteSavedPanel(code) {
