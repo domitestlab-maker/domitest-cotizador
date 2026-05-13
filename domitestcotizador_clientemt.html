@@ -523,7 +523,16 @@
 </head>
 <body>
 
-
+<script>
+  // Si está embebido en otra página (ej. domitest.com.co), quitar min-height 100vh
+  // del body para que el iframe se ajuste al contenido real y no crezca infinito.
+  if (window.self !== window.top) {
+    document.documentElement.style.minHeight = '0';
+    window.addEventListener('DOMContentLoaded', function() {
+      document.body.style.minHeight = '0';
+    });
+  }
+</script>
 
 <div class="container">
   <!-- LEFT COLUMN -->
@@ -753,7 +762,7 @@
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
 const PROXY_URL = 'https://domitest-proxy.vercel.app';
-const AGENDADOR_URL = 'https://domitestlab-maker.github.io/domitest-agendador';
+const AGENDADOR_URL = 'https://domitest.com.co/agendador';
 
 // Estado de la cotización guardada en backend (código DT-XXXXX)
 let savedQuoteCode = null;
@@ -779,7 +788,7 @@ async function saveQuoteToBackend(payload) {
 }
 
 function buildAgendadorLink(code) {
-  return AGENDADOR_URL + '/?code=' + encodeURIComponent(code);
+  return AGENDADOR_URL + '?code=' + encodeURIComponent(code);
 }
 
 function showQuoteSavedPanel(code) {
