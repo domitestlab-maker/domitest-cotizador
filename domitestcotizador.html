@@ -742,7 +742,7 @@
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
 const PROXY_URL = 'https://domitest-proxy.vercel.app';
-const AGENDADOR_URL = 'https://domitest.com.co/agendador';
+const AGENDADOR_URL = 'https://agendar.domitest.com.co';
 
 // Estado de la cotización guardada en backend
 let savedQuoteCode = null;
@@ -768,9 +768,7 @@ async function saveQuoteToBackend(payload) {
 }
 
 function buildAgendadorLink(code) {
-  // Usar hash (#) en lugar de query (?) porque Hostinger Builder strippea
-  // los query strings antes de que la página JS los pueda leer.
-  return AGENDADOR_URL + '#code=' + encodeURIComponent(code);
+  return AGENDADOR_URL + '/?code=' + encodeURIComponent(code);
 }
 
 function showQuoteSavedPanel(code) {
